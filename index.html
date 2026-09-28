@@ -1864,7 +1864,145 @@ setInterval(loadLiveFootball, 120000);
 <script type="module" crossorigin
 src="https://widgets.api-sports.io/3.1.0/widgets.js"></script>
 
-<api-sports-widget
+<section style="max-width:1200px;margin:40px auto;padding:20px;">
+  <h2 style="text-align:center;font-size:30px;">
+    ⚽ Football
+  </h2>
+
+  <div style="display:flex;justify-content:center;gap:15px;margin:20px 0;">
+    <button onclick="showFootball('live')">🔴 LIVE</button>
+    <button onclick="showFootball('today')">📅 TODAY</button>
+    <button onclick="showFootball('upcoming')">⏰ UPCOMING</button>
+  </div>
+
+  <div id="footballMatches"
+       style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px;">
+    Loading matches...
+  </div>
+</section>
+
+<script>
+let footballData = [];
+let currentFootballTab = "live";
+
+async function loadFootball() {
+  try {
+    const response = await fetch("./data/today.json?t=" + Date.now());
+
+    if (!response.ok) {
+      throw new Error("today.json not found");
+    }
+
+    const data = await response.json();
+
+    footballData = data.response || [];
+
+    showFootball(currentFootballTab);
+
+  } catch (error) {
+    document.getElementById("footballMatches").innerHTML =
+      "<p style='text-align:center;'>⚠️ Football data unavailable</p>";
+  }
+}
+
+function showFootball(type) {
+  currentFootballTab = type;
+
+  const container = document.getElementById("footballMatches");
+
+  let matches = footballData;
+
+  if (type === "live") {
+    matches = footballData.filter(match =>
+      ["1H", "2H", "ET", "P", "HT"].includes(match.fixture.status.short)
+    );
+  }
+
+  if (type === "upcoming") {
+    matches = footballData.filter(match =>
+      ["NS", "TBD"].includes(match.fixture.status.short)
+    );
+  }
+
+  if (matches.length === 0) {
+    container.innerHTML = `
+      <div style="
+        grid-column:1/-1;
+        text-align:center;
+        padding:40px;
+        background:#111827;
+        border-radius:15px;
+      ">
+        <h3>
+          ${type === "live"
+            ? "🔴 No live matches right now"
+            : type === "today"
+            ? "📅 No matches today"
+            : "⏰ No upcoming matches"}
+        </h3>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = matches.map(match => {
+
+    const home = match.teams.home;
+    const away = match.teams.away;
+    const status = match.fixture.status;
+
+    return `
+      <div style="
+        background:#111827;
+        padding:20px;
+        border-radius:15px;
+        text-align:center;
+        border:1px solid #263244;
+      ">
+
+        <div style="font-size:13px;color:#22d3ee;margin-bottom:10px;">
+          ${match.league.name}
+        </div>
+
+        <div style="font-size:16px;font-weight:bold;">
+          ${home.name}
+        </div>
+
+        <div style="
+          font-size:24px;
+          font-weight:bold;
+          margin:10px;
+          color:${["1H","2H","ET","P","HT"].includes(status.short)
+            ? "#ef4444"
+            : "#22d3ee"};
+        ">
+          ${home.name && away.name
+            ? `${match.goals.home ?? "-"} : ${match.goals.away ?? "-"}`
+            : "-"}
+        </div>
+
+        <div style="font-size:16px;font-weight:bold;">
+          ${away.name}
+        </div>
+
+        <div style="
+          margin-top:12px;
+          color:#9ca3af;
+          font-size:13px;
+        ">
+          ${status.long}
+          ${status.elapsed ? " • " + status.elapsed + "'" : ""}
+        </div>
+
+      </div>
+    `;
+  }).join("");
+}
+
+loadFootball();
+
+setInterval(loadFootball, 120000);
+</script><api-sports-widget
 ...
 </api-sports-widget>
 
